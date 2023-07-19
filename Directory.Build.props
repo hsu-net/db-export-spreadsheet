@@ -1,0 +1,49 @@
+<Project>
+
+  <PropertyGroup>
+    <IsTestProject Condition="$(MSBuildProjectFullPath.Contains('test')) and ($(MSBuildProjectName.EndsWith('.Tests')) or $(MSBuildProjectName.EndsWith('.TestBase')))">true</IsTestProject>
+    <IsSampleProject Condition="$(MSBuildProjectFullPath.Contains('sample')) and $(MSBuildProjectName.EndsWith('Sample'))">true</IsSampleProject>
+    <IsAppProject Condition="$(MSBuildProjectFullPath.Contains('\app\')) or $(MSBuildProjectFullPath.Contains('/app/'))">true</IsAppProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None
+            Include="$([MSBuild]::GetPathOfFileAbove(README.md, $(MSBuildProjectDirectory)))"
+            Condition="'$(MSBuildProjectDirectory)' != '' and '$([MSBuild]::GetPathOfFileAbove(README.md,$(MSBuildProjectDirectory)))' != ''"
+            LinkBase=".assets" />
+    <None
+            Include="$([MSBuild]::GetPathOfFileAbove(LICENSE, $(MSBuildProjectDirectory)))"
+            Condition="'$(MSBuildProjectDirectory)' != '' and '$([MSBuild]::GetPathOfFileAbove(LICENSE,$(MSBuildProjectDirectory)))' != ''"
+            LinkBase=".assets" />
+    <None
+            Include="$(MSBuildThisFileDirectory).editorconfig"
+            Condition="'$(MSBuildProjectDirectory)' != '' and '$([MSBuild]::GetPathOfFileAbove(.editorconfig,$(MSBuildProjectDirectory)))' != ''"
+            LinkBase=".assets" />
+    <None
+            Include="$(MSBuildThisFileDirectory).gitignore"
+            Condition="'$(MSBuildProjectDirectory)' != '' and '$([MSBuild]::GetPathOfFileAbove(.gitignore,$(MSBuildProjectDirectory)))' != ''"
+            LinkBase=".assets" />
+    <None
+            Include="$(MSBuildThisFileDirectory)NuGet.config"
+            Condition="'$(MSBuildProjectDirectory)' != '' and '$([MSBuild]::GetPathOfFileAbove(NuGet.config,$(MSBuildProjectDirectory)))' != ''"
+            LinkBase=".assets" />
+    <None
+            Include="$(MSBuildThisFileDirectory)global.json"
+            Condition="'$(MSBuildProjectDirectory)' != '' and '$([MSBuild]::GetPathOfFileAbove(global.json,$(MSBuildProjectDirectory)))' != ''"
+            LinkBase=".assets" />
+    <None
+            Include="$(MSBuildThisFileDirectory)*.props"
+            LinkBase=".props" />
+    <None
+            Include="$(MSBuildThisFileDirectory)*.targets"
+            LinkBase=".props" />
+    <None
+        Include="$([MSBuild]::GetPathOfFileAbove(version.props, $(MSBuildProjectDirectory)))"
+        Condition="'$(MSBuildProjectDirectory)' != '' and '$([MSBuild]::GetPathOfFileAbove(version.props, $(MSBuildProjectDirectory)))' != ''"
+        LinkBase=".props" />
+    <None
+            Include="$([MSBuild]::GetPathOfFileAbove(project.props, $(MSBuildProjectDirectory)))"
+            Condition="'$(MSBuildProjectDirectory)' != '' and '$([MSBuild]::GetPathOfFileAbove(project.props, $(MSBuildProjectDirectory)))' != ''"
+            LinkBase=".props" />
+  </ItemGroup>
+</Project>

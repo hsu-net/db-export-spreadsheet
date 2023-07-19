@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D641040A-3751-4758-9C9A-907E62F8AB50}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hsu.Db.Export.Spreadsheet", "src\Hsu.Db.Export.Spreadsheet\Hsu.Db.Export.Spreadsheet.csproj", "{D0601B46-98C8-4E70-9BDC-08EEC6759834}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "sample", "sample", "{F8B26391-C4C2-408D-A275-F851EC5CEA1F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hsu.Db.Export.Spreadsheet.Worker", "sample\Hsu.Db.Export.Spreadsheet.Worker\Hsu.Db.Export.Spreadsheet.Worker.csproj", "{1716ECCD-EAB1-45D0-83ED-30108FD96684}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NukeBuild", "build\NukeBuild.csproj", "{1E4A22AD-6194-4C86-AFDA-F7BB8D43693D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{EFCD93A6-E8AC-418F-B863-6AFF38349A63}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D0601B46-98C8-4E70-9BDC-08EEC6759834} = {D641040A-3751-4758-9C9A-907E62F8AB50}
+		{1716ECCD-EAB1-45D0-83ED-30108FD96684} = {F8B26391-C4C2-408D-A275-F851EC5CEA1F}
+		{1E4A22AD-6194-4C86-AFDA-F7BB8D43693D} = {EFCD93A6-E8AC-418F-B863-6AFF38349A63}
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1E4A22AD-6194-4C86-AFDA-F7BB8D43693D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E4A22AD-6194-4C86-AFDA-F7BB8D43693D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D0601B46-98C8-4E70-9BDC-08EEC6759834}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D0601B46-98C8-4E70-9BDC-08EEC6759834}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D0601B46-98C8-4E70-9BDC-08EEC6759834}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D0601B46-98C8-4E70-9BDC-08EEC6759834}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1716ECCD-EAB1-45D0-83ED-30108FD96684}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1716ECCD-EAB1-45D0-83ED-30108FD96684}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1716ECCD-EAB1-45D0-83ED-30108FD96684}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1716ECCD-EAB1-45D0-83ED-30108FD96684}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,49 @@
+﻿<Project>
+  <PropertyGroup>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/hsu-net/db-export-spreadsheet.git</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/hsu-net/db-export-spreadsheet</PackageProjectUrl>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageTags>Database;Db;Export;Excel;Csv;Spreadsheet;Hsu;</PackageTags>
+    <LicenseFile>LICENSE</LicenseFile>
+    <Description>A database table export spreadsheet component, which can export Excel and Csv files, and supports Excel templates.</Description>
+    <Company>Hsu</Company>
+    <Authors>Hsu</Authors>
+    <Copyright>Copyright © Hsu 2023-now</Copyright>
+    <OutputPath>$(MSBuildThisFileDirectory)output\libs\$(AssemblyName)</OutputPath>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <LangVersion>11.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IncludeSymbols>true</IncludeSymbols>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <!--<SatelliteResourceLanguages>zh-Hans</SatelliteResourceLanguages>-->
+    <SatelliteResourceLanguages>None</SatelliteResourceLanguages>
+    <NoWarn>1591;NETSDK1138;CA1416;$(NoWarn)</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" Visible="false" PackagePath="" />
+    <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" Visible="false" PackagePath="$(PackageLicenseFile)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(ImplicitUsings)' == 'enable'">
+    <Using Remove="System.Net.Http" />
+  </ItemGroup>
+
+  <Import
+          Project="$(MSBuildThisFileDirectory)test.props"
+          Condition="'$(IsTestProject)' == 'true' and Exists('$(MSBuildThisFileDirectory)test.props')" />
+  <Import
+          Project="$(MSBuildThisFileDirectory)sample.props"
+          Condition="'$(IsSampleProject)' == 'true' and Exists('$(MSBuildThisFileDirectory)sample.props')" />
+  <Import
+          Project="$(MSBuildThisFileDirectory)app.props"
+          Condition="'$(IsAppProject)' == 'true' and Exists('$(MSBuildThisFileDirectory)app.props')" />
+  <Import
+    Project="$([MSBuild]::GetPathOfFileAbove(version.props, $(MSBuildProjectDirectory)))"
+    Condition="'$(MSBuildProjectDirectory)' != '' and '$([MSBuild]::GetPathOfFileAbove(version.props,$(MSBuildProjectDirectory)))' != ''" />
+  <Import
+    Project="$([MSBuild]::GetPathOfFileAbove(project.props, $(MSBuildProjectDirectory)))"
+    Condition="'$(MSBuildProjectDirectory)' != '' and '$([MSBuild]::GetPathOfFileAbove(project.props,$(MSBuildProjectDirectory)))' != ''" />
+</Project>
