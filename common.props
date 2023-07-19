@@ -6,7 +6,7 @@
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>Database;Db;Export;Excel;Csv;Spreadsheet;Hsu;</PackageTags>
     <LicenseFile>LICENSE</LicenseFile>
-    <Description>A database table export spreadsheet component, which can export Excel and Csv files, and supports Excel templates.</Description>
+    <Description>A component that regularly exports database tables to spreadsheets every day, can export Excel and Csv files, and supports Excel templates.</Description>
     <Company>Hsu</Company>
     <Authors>Hsu</Authors>
     <Copyright>Copyright © Hsu 2023-now</Copyright>
