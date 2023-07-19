@@ -14,6 +14,7 @@ using MiniExcelLibs.Csv;
 using MiniExcelLibs.OpenXml;
 using IConfiguration = Microsoft.Extensions.Configuration.IConfiguration;
 // ReSharper disable UnusedMember.Local
+// ReSharper disable PossibleMultipleEnumeration
 
 namespace Hsu.Db.Export.Spreadsheet.Workers;
 
@@ -62,8 +63,8 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
         while (!stoppingToken.IsCancellationRequested)
         {
             var now = DateTime.Now;
-            if (await Check(now,_time,stoppingToken)) continue;
-            
+            if (await Check(now, _time, stoppingToken)) continue;
+
             try
             {
                 now = now.AddDays(-1);
@@ -80,19 +81,14 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                         try
                         {
                             _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} records ...", table.Name, date);
-                            var records = await GetRecords(_freeSql,table, date, types[table.Code], stoppingToken);
-                            _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} query {Count} records ..."
-                                , table.Name
-                                , date
-                                , records?.Count ?? 0);
-                            
-                            if (records == null || records.Count == 0) continue;
-
+                            var total = new AsyncLocal<int>();
+                            var records = GetRecords(_freeSql, table, date, types[table.Code], total, stoppingToken);
+                            if (!records.Any()) continue;
                             await _exportService.ExportAsync(records, table, _path, date.Date, configurations[table.Code], stoppingToken);
-                            _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} export {Count} records completed"
+                            _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} export {Total} records completed"
                                 , table.Name
                                 , date
-                                , records.Count);
+                                , total.Value);
                         }
                         catch (Exception ex)
                         {
@@ -112,7 +108,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
 
                     if (!completed)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                        await Task.Delay(_options.Interval, stoppingToken);
                     }
                 }
 
@@ -125,7 +121,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
         }
     }
 
-    private static async Task<List<object>> GetRecords(IFreeSql freeSql,TableOptions table, DateTime date, TableInfo info, CancellationToken stoppingToken)
+    private static IEnumerable<object> GetRecords(IFreeSql freeSql, TableOptions table, DateTime date, TableInfo info, AsyncLocal<int> total, CancellationToken stoppingToken)
     {
         var filter = new DynamicFilterInfo()
         {
@@ -147,16 +143,46 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
             }
         };
 
-        var records = await freeSql
-            .Select<object>()
-            .AsType(info.Type)
-            .WhereDynamicFilter(filter)
-            .OrderByPropertyName(table.Filter, table.AscOrder)
-            .ToListAsync(stoppingToken);
-        return records;
+        var collection = new BlockingCollection<object>();
+        Task.Run(() =>
+        {
+            var count = 0;
+            var down = new CountdownEvent(1);
+            freeSql
+                .Select<object>()
+                .AsType(info.Type)
+                .WhereDynamicFilter(filter)
+                .OrderByPropertyName(table.Filter, table.AscOrder)
+                .ToChunk(table.Chunk, x =>
+                {
+                    try
+                    {
+                        down.AddCount();
+                        Interlocked.Add(ref count, x.Object.Count);
+                        foreach(var item in x.Object)
+                        {
+                            collection.TryAdd(item, Timeout.Infinite, stoppingToken);
+                        }
+                    }
+                    finally
+                    {
+                        down.Signal();
+                    }
+                });
+            down.Signal();
+            down.Wait(stoppingToken);
+            total.Value = count;
+            collection.CompleteAdding();
+        }, stoppingToken);
+
+        while (!collection.IsCompleted)
+        {
+            if (!collection.TryTake(out var item)) continue;
+            yield return item;
+        }
     }
 
-    private static (DateTime Date,string Path) GetDate(string dir, string table, DateTime now)
+    private static (DateTime Date, string Path) GetDate(string dir, string table, DateTime now)
     {
         DateTime date;
         var path = Path.Combine(dir, table);
@@ -174,10 +200,10 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
             date = now;
         }
 
-        return (date,path);
+        return (date, path);
     }
 
-    private static async Task<bool> Check(DateTime now,TimeSpan span,CancellationToken stoppingToken)
+    private static async Task<bool> Check(DateTime now, TimeSpan span, CancellationToken stoppingToken)
     {
         var t1 = now.Date.Add(span - TimeSpan.FromHours(1));
         var t2 = now.Date.Add(span - TimeSpan.FromMinutes(15));
@@ -227,10 +253,33 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
 
             types.TryAdd(table.Code, builder.Build());
 
+            if (!string.IsNullOrWhiteSpace(table.Template))
+            {
+                if (!table.Template.EndsWith(".xlsx"))
+                {
+                    _logger.LogWarning("The template file [{File}] extension is not `.xlsx`", table.Template);
+                    table.Template = null;
+                }
+                else
+                {
+                    var path = Path.Combine(Environment.CurrentDirectory, table.Template);
+                    if (!File.Exists(path))
+                    {
+                        _logger.LogWarning("Could not find template file [{File}]", table.Template);
+                        table.Template = null;
+                    }    
+                }
+            }
+            else
+            {
+                table.Template = null;
+            }
+
             if (table.Output.Equals("Xlsx", StringComparison.OrdinalIgnoreCase))
             {
                 configurations.TryAdd(table.Code, new OpenXmlConfiguration
                 {
+                    AutoFilter = false,
                     DynamicColumns = table.Fields.Select(x => new DynamicExcelColumn(x.Column) { Name = x.Name }).ToArray()
                 });
             }

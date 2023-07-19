@@ -1,12 +1,13 @@
 ﻿using Hsu.Db.Export.Spreadsheet.Options;
 using Microsoft.Extensions.Logging;
 using MiniExcelLibs;
+// ReSharper disable PossibleMultipleEnumeration
 
 namespace Hsu.Db.Export.Spreadsheet.Services;
 
 public interface IExportService
 {
-    Task ExportAsync(List<dynamic>? rows, TableOptions options,string dir, DateTime date,Configuration? configuration, CancellationToken cancellation);
+    Task ExportAsync(IEnumerable<dynamic>? rows, TableOptions options,string dir, DateTime date,Configuration? configuration, CancellationToken cancellation);
 }
 
 public class ExportService : IExportService
@@ -18,9 +19,9 @@ public class ExportService : IExportService
         _logger = logger;
     }
 
-    public async Task ExportAsync(List<dynamic>? rows, TableOptions options,string dir, DateTime date,Configuration? configuration, CancellationToken cancellation)
+    public async Task ExportAsync(IEnumerable<dynamic>? rows, TableOptions options,string dir, DateTime date,Configuration? configuration, CancellationToken cancellation)
     {
-        if(rows==null || rows.Count==0) return;
+        if(rows==null || !rows.Any()) return;
 
         if (options.Template != null)
         {

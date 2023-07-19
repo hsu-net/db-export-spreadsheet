@@ -58,3 +58,4 @@ static void ConfigureFreeSql(IServiceCollection services, IConfiguration configu
 
     services.AddSingleton(freeSql);
 }
+

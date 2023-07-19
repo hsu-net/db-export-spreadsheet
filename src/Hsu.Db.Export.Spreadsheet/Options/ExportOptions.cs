@@ -6,6 +6,7 @@ public class ExportOptions
 {
     public static string Export { get; set; } = "Export:Spreadsheet"; 
     public TimeSpan Trigger { get; set; } = TimeSpan.Zero;
+    public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(30);
     public string Path { get; set; } = string.Empty;
     public  List<TableOptions> Tables { get; set; }
 
@@ -20,6 +21,7 @@ public record TableOptions
     public string Name { get; set; } = string.Empty;
     public string Code { get; set; } = string.Empty;
     public string Filter { get; set; } = string.Empty;
+    public int Chunk { get; set; } = 1000;
     public bool AscOrder { get; set; } = true;
     public List<TableField> Fields { get; set; }
     public string Output { get; set; } = "Csv";

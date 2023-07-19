@@ -67,12 +67,14 @@ A component that regularly exports database tables to spreadsheets every day, ca
     "Export": {
         "Spreadsheet": {
             "Trigger": "00:00:00",
+            "Interval": "00:00:30",
             "Path": null,
             "Tables": [
                 {
                     "Name": "Csv测试表",
                     "Code": "TestCsv",
                     "Filter": "CreateTime",
+                    "Chunk": 1000,
                     "AscOrder": true,
                     "Output": "Csv",
                     "Fields": [
@@ -107,6 +109,7 @@ A component that regularly exports database tables to spreadsheets every day, ca
                     "Name": "测试Xlsx",
                     "Code": "TestXlsx",
                     "Filter": "CreateTime",
+                    "Chunk": 1000,
                     "AscOrder": false,
                     "Template": "template.xlsx",
                     "Output": "Xlsx",
