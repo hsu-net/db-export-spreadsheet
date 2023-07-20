@@ -48,8 +48,8 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
 static void ConfigureFreeSql(IServiceCollection services, IConfiguration configuration)
 {
     var freeSql = new FreeSqlBuilder()
-        .UseConnectionString(DataType.MySql, $"Password={configuration.GetSection("mysql:password").Get<string>()};{configuration.GetConnectionString("Default")}")
-        //.UseConnectionString(DataType.MySql, configuration.GetConnectionString("Db"))
+        //.UseConnectionString(DataType.MySql, $"Password={configuration.GetSection("mysql:password").Get<string>()};{configuration.GetConnectionString("Default")}")
+        .UseConnectionString(DataType.MySql, configuration.GetConnectionString("Db"))
         .Build();
 
     freeSql.Aop.CommandAfter += (_, e) =>

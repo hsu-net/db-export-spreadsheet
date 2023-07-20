@@ -9,10 +9,6 @@ using Hsu.Db.Export.Spreadsheet.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using MiniExcelLibs;
-using MiniExcelLibs.Attributes;
-using MiniExcelLibs.Csv;
-using MiniExcelLibs.OpenXml;
 using IConfiguration = Microsoft.Extensions.Configuration.IConfiguration;
 // ReSharper disable UnusedMember.Local
 // ReSharper disable PossibleMultipleEnumeration
@@ -57,10 +53,12 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Sync Executing");
+        await Task.Delay(5000, stoppingToken);
         var dir = InitialDirectory();
         var launch = _options.Launch ?? false;
         var timeout = (int)_options.Timeout.GetValueOrDefault(TimeSpan.FromMinutes(1.5)).TotalMilliseconds;
-        var (types, configurations) = InitialConfigurations();
+        var types = InitialConfigurations();
+        _exportService.InitialConfigurations(_options.Tables);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -85,7 +83,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                         try
                         {
                             _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} records ...", table.Name, date);
-                            var total = await FetchRecordAsync(_freeSql,timeout, table, date, _path, types[table.Code], configurations[table.Code], _exportService, _logger, stoppingToken);
+                            var total = await FetchRecordAsync(_freeSql,timeout, table, date, _path, types[table.Code], _exportService, _logger, stoppingToken);
                             sw.Stop();
                             _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} export {Total} records completed used {Time}."
                                 , table.Name
@@ -131,7 +129,6 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
         DateTime date,
         string dir,
         TableInfo info,
-        Configuration configuration,
         IExportService exportService,
         ILogger logger,
         CancellationToken stoppingToken
@@ -156,7 +153,8 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                 }
             }
         };
-        var collection = new AsyncLocal<BlockingCollection<object>>() { Value = new BlockingCollection<object>() };
+        //var collection = new AsyncLocal<BlockingCollection<object>>() { Value = new BlockingCollection<object>() };
+        var collection =  new BlockingCollection<object>();
         var tcs = new TaskCompletionSource<int>();
 
         _ = Task.Run(() =>
@@ -166,6 +164,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
             var down = new CountdownEvent(1);
             try
             {
+                logger.LogDebug("{Table} at {Date:yyyy-MM-dd} Query ...", table.Name, date.Date);
                 freeSql
                     .Select<object>()
                     .CommandTimeout(timeout)
@@ -181,7 +180,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                             Interlocked.Add(ref count, x.Object.Count);
                             foreach(var item in x.Object)
                             {
-                                collection.Value.TryAdd(item, Timeout.Infinite, stoppingToken);
+                                collection.TryAdd(item, Timeout.Infinite, stoppingToken);
                             }
                         }
                         finally
@@ -191,7 +190,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                     });
                 down.Signal();
                 down.Wait(stoppingToken);
-                collection.Value.CompleteAdding();
+                collection.CompleteAdding();
                 tcs.SetResult(count);
             }
             catch (Exception e)
@@ -199,18 +198,8 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                 tcs.SetException(e);
             }
         }, stoppingToken);
-
-        await exportService.ExportAsync(GetEnumerable(), table, dir, date.Date, configuration, stoppingToken);
+        await exportService.ExportAsync(collection.GetConsumingEnumerable(stoppingToken), table, dir, date.Date, stoppingToken);
         return await tcs.Task;
-
-        IEnumerable<object> GetEnumerable()
-        {
-            while (!collection.Value.IsCompleted)
-            {
-                if (!collection.Value.TryTake(out var item)) continue;
-                yield return item;
-            }
-        }
     }
 
     private static (DateTime Date, string Path) GetDate(string dir, string table, DateTime now)
@@ -269,10 +258,9 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
         return false;
     }
 
-    private (ConcurrentDictionary<string, TableInfo> Types, ConcurrentDictionary<string, Configuration> Configurations) InitialConfigurations()
+    private ConcurrentDictionary<string, TableInfo> InitialConfigurations()
     {
         var types = new ConcurrentDictionary<string, TableInfo>();
-        var configurations = new ConcurrentDictionary<string, Configuration>();
         foreach(var table in _options.Tables)
         {
             var builder = _freeSql.CodeFirst.DynamicEntity(table.Code, new TableAttribute { Name = table.Code });
@@ -309,25 +297,9 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
             {
                 table.Template = null;
             }
-
-            if (table.Output.Equals("Xlsx", StringComparison.OrdinalIgnoreCase))
-            {
-                configurations.TryAdd(table.Code, new OpenXmlConfiguration
-                {
-                    AutoFilter = false,
-                    DynamicColumns = table.Fields.Select(x => new DynamicExcelColumn(x.Property ?? x.Column) { Name = x.Name }).ToArray()
-                });
-            }
-            else
-            {
-                configurations.TryAdd(table.Code, new CsvConfiguration()
-                {
-                    DynamicColumns = table.Fields.Select(x => new DynamicExcelColumn(x.Property ?? x.Column) { Name = x.Name }).ToArray()
-                });
-            }
         }
-
-        return (types, configurations);
+        
+        return types;
     }
 
     private string InitialDirectory()
