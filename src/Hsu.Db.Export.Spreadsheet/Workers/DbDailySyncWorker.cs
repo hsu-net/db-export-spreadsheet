@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using FreeSql.DataAnnotations;
 using FreeSql.Internal.Model;
@@ -57,13 +58,15 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
     {
         _logger.LogInformation("Sync Executing");
         var dir = InitialDirectory();
-
+        var launch = _options.Launch ?? false;
+        var timeout = (int)_options.Timeout.GetValueOrDefault(TimeSpan.FromMinutes(1.5)).TotalMilliseconds;
         var (types, configurations) = InitialConfigurations();
 
         while (!stoppingToken.IsCancellationRequested)
         {
             var now = DateTime.Now;
-            if (await Check(now, _time, stoppingToken)) continue;
+            if (!launch && await Check(now, _time, stoppingToken)) continue;
+            launch = false;
 
             try
             {
@@ -78,21 +81,22 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                         var (date, tmp) = GetDate(dir, table.Code, now);
                         if (date > now) continue;
                         if (date < now) completed = false;
+                        var sw = Stopwatch.StartNew();
                         try
                         {
                             _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} records ...", table.Name, date);
-                            var total = new AsyncLocal<int>();
-                            var records = GetRecords(_freeSql, table, date, types[table.Code], total, stoppingToken);
-                            if (!records.Any()) continue;
-                            await _exportService.ExportAsync(records, table, _path, date.Date, configurations[table.Code], stoppingToken);
-                            _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} export {Total} records completed"
+                            var total = await FetchRecordAsync(_freeSql,timeout, table, date, _path, types[table.Code], configurations[table.Code], _exportService, _logger, stoppingToken);
+                            sw.Stop();
+                            _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} export {Total} records completed used {Time}."
                                 , table.Name
                                 , date
-                                , total.Value);
+                                , total
+                                , sw.Elapsed);
                         }
                         catch (Exception ex)
                         {
                             _logger.LogError(ex, ex.Message);
+                            if(sw.IsRunning) sw.Stop();
                             completed = true;
                             break;
                         }
@@ -121,7 +125,17 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
         }
     }
 
-    private static IEnumerable<object> GetRecords(IFreeSql freeSql, TableOptions table, DateTime date, TableInfo info, AsyncLocal<int> total, CancellationToken stoppingToken)
+    private static async Task<int> FetchRecordAsync(IFreeSql freeSql,
+        int timeout,
+        TableOptions table,
+        DateTime date,
+        string dir,
+        TableInfo info,
+        Configuration configuration,
+        IExportService exportService,
+        ILogger logger,
+        CancellationToken stoppingToken
+    )
     {
         var filter = new DynamicFilterInfo()
         {
@@ -142,43 +156,60 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                 }
             }
         };
+        var collection = new AsyncLocal<BlockingCollection<object>>() { Value = new BlockingCollection<object>() };
+        var tcs = new TaskCompletionSource<int>();
 
-        var collection = new BlockingCollection<object>();
-        Task.Run(() =>
+        _ = Task.Run(() =>
         {
             var count = 0;
+            var counter = 0;
             var down = new CountdownEvent(1);
-            freeSql
-                .Select<object>()
-                .AsType(info.Type)
-                .WhereDynamicFilter(filter)
-                .OrderByPropertyName(table.Filter, table.AscOrder)
-                .ToChunk(table.Chunk, x =>
-                {
-                    try
+            try
+            {
+                freeSql
+                    .Select<object>()
+                    .CommandTimeout(timeout)
+                    .AsType(info.Type)
+                    .WhereDynamicFilter(filter)
+                    .OrderByPropertyName(table.Filter, table.AscOrder ?? true)
+                    .ToChunk(table.Chunk.GetValueOrDefault(1000), x =>
                     {
-                        down.AddCount();
-                        Interlocked.Add(ref count, x.Object.Count);
-                        foreach(var item in x.Object)
+                        try
                         {
-                            collection.TryAdd(item, Timeout.Infinite, stoppingToken);
+                            logger.LogDebug("{Table} at {Date:yyyy-MM-dd} Query Chunk#{No:0000} {Size} ", table.Name, date.Date, Interlocked.Increment(ref counter), x.Object.Count);
+                            down.AddCount();
+                            Interlocked.Add(ref count, x.Object.Count);
+                            foreach(var item in x.Object)
+                            {
+                                collection.Value.TryAdd(item, Timeout.Infinite, stoppingToken);
+                            }
                         }
-                    }
-                    finally
-                    {
-                        down.Signal();
-                    }
-                });
-            down.Signal();
-            down.Wait(stoppingToken);
-            total.Value = count;
-            collection.CompleteAdding();
+                        finally
+                        {
+                            down.Signal();
+                        }
+                    });
+                down.Signal();
+                down.Wait(stoppingToken);
+                collection.Value.CompleteAdding();
+                tcs.SetResult(count);
+            }
+            catch (Exception e)
+            {
+                tcs.SetException(e);
+            }
         }, stoppingToken);
 
-        while (!collection.IsCompleted)
+        await exportService.ExportAsync(GetEnumerable(), table, dir, date.Date, configuration, stoppingToken);
+        return await tcs.Task;
+
+        IEnumerable<object> GetEnumerable()
         {
-            if (!collection.TryTake(out var item)) continue;
-            yield return item;
+            while (!collection.Value.IsCompleted)
+            {
+                if (!collection.Value.TryTake(out var item)) continue;
+                yield return item;
+            }
         }
     }
 
@@ -247,15 +278,19 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
             var builder = _freeSql.CodeFirst.DynamicEntity(table.Code, new TableAttribute { Name = table.Code });
             foreach(var field in table.Fields)
             {
-                if (!TypeHelper.TryFromTypeCode(field.Type, out var type)) type = typeof(string);
-                builder.Property(field.Column, type); //new DisplayNameAttribute(field.Name)
+                if (!TypeHelper.TryFromTypeCode(field.Type, out var type) || type == null) type = typeof(string);
+                if (type.IsValueType && field.Nullable.GetValueOrDefault(true)) type = typeof(Nullable<>).MakeGenericType(type);
+                builder.Property(field.Property ?? field.Column
+                    , type
+                    , new ColumnAttribute() { Name = field.Column }
+                ); //new DisplayNameAttribute(field.Name)
             }
 
             types.TryAdd(table.Code, builder.Build());
 
             if (!string.IsNullOrWhiteSpace(table.Template))
             {
-                if (!table.Template.EndsWith(".xlsx"))
+                if (!table.Template!.EndsWith(".xlsx"))
                 {
                     _logger.LogWarning("The template file [{File}] extension is not `.xlsx`", table.Template);
                     table.Template = null;
@@ -267,7 +302,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                     {
                         _logger.LogWarning("Could not find template file [{File}]", table.Template);
                         table.Template = null;
-                    }    
+                    }
                 }
             }
             else
@@ -280,14 +315,14 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                 configurations.TryAdd(table.Code, new OpenXmlConfiguration
                 {
                     AutoFilter = false,
-                    DynamicColumns = table.Fields.Select(x => new DynamicExcelColumn(x.Column) { Name = x.Name }).ToArray()
+                    DynamicColumns = table.Fields.Select(x => new DynamicExcelColumn(x.Property ?? x.Column) { Name = x.Name }).ToArray()
                 });
             }
             else
             {
                 configurations.TryAdd(table.Code, new CsvConfiguration()
                 {
-                    DynamicColumns = table.Fields.Select(x => new DynamicExcelColumn(x.Column) { Name = x.Name }).ToArray()
+                    DynamicColumns = table.Fields.Select(x => new DynamicExcelColumn(x.Property ?? x.Column) { Name = x.Name }).ToArray()
                 });
             }
         }

@@ -1,6 +1,6 @@
-<Project Sdk="Microsoft.NET.Sdk">
-    
-    <Import Project="$([MSBuild]::GetPathOfFileAbove(common.props, $(MSBuildProjectDirectory)))" Condition="'$(MSBuildProjectDirectory)' != '' and '$([MSBuild]::GetPathOfFileAbove(common.props,$(MSBuildProjectDirectory)))' != ''"/>
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="$([MSBuild]::GetPathOfFileAbove(common.props, $(MSBuildProjectDirectory)))" Condition="'$(MSBuildProjectDirectory)' != '' and '$([MSBuild]::GetPathOfFileAbove(common.props,$(MSBuildProjectDirectory)))' != ''" />
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
@@ -8,6 +8,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <OutputPath>..\..\output\samples\$(AssemblyName)</OutputPath>
+        <UserSecretsId>5655bdcf-56b3-41b4-a892-6cea27de1aa9</UserSecretsId>
     </PropertyGroup>
 
     <ItemGroup>
@@ -18,6 +19,7 @@
         <PackageReference Include="Hsu.Daemon.Hosting" Version="2023.307.18" />
         <PackageReference Include="FreeSql.Provider.MySql" Version="3.2.697" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="7.0.0" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
         <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="7.0.1" />
         <PackageReference Include="Serilog.Extensions.Hosting" Version="7.0.0" />
@@ -33,6 +35,9 @@
         </None>
         <None Update="serilog.json">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="ExportTemplate.xlsx">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
     </ItemGroup>
 

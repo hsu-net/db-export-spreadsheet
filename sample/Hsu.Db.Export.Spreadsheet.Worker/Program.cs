@@ -1,4 +1,5 @@
-﻿using FreeSql;
+﻿using System.Reflection;
+using FreeSql;
 using Hsu.Daemon.Hosting;
 using Hsu.Db.Export.Spreadsheet;
 using Microsoft.Extensions.Configuration;
@@ -7,10 +8,10 @@ using Microsoft.Extensions.Hosting;
 using Serilog;
 // ReSharper disable StringLiteralTypo
 
-if (Hsu.Daemon.Host.Runnable(args, out var code)) return;
+if (!Hsu.Daemon.Host.Runnable(args, out var code)) return;
 
 var variables = Environment.GetCommandLineArgs();
-Environment.SetEnvironmentVariable("AppRoot", variables[0], EnvironmentVariableTarget.Process);
+Environment.SetEnvironmentVariable("AppRoot", Path.GetDirectoryName(variables[0]), EnvironmentVariableTarget.Process);
 
 var configuration = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json")
@@ -23,7 +24,11 @@ Log.Logger = new LoggerConfiguration()
 
 var builder = Host
     .CreateDefaultBuilder(null)
-    .ConfigureHostConfiguration(x => x.SetBasePath(Path.GetDirectoryName(variables[0])!))
+    .ConfigureHostConfiguration(x =>
+    {
+        x.SetBasePath(Path.GetDirectoryName(variables[0])!);
+        x.AddUserSecrets(Assembly.GetExecutingAssembly());
+    })
     .ConfigureServices((hostContext, services) =>
     {
         ConfigureServices(services, hostContext.Configuration);
@@ -43,7 +48,8 @@ static void ConfigureServices(IServiceCollection services, IConfiguration config
 static void ConfigureFreeSql(IServiceCollection services, IConfiguration configuration)
 {
     var freeSql = new FreeSqlBuilder()
-        .UseConnectionString(DataType.MySql, configuration.GetConnectionString("Default"))
+        .UseConnectionString(DataType.MySql, $"Password={configuration.GetSection("mysql:password").Get<string>()};{configuration.GetConnectionString("Default")}")
+        //.UseConnectionString(DataType.MySql, configuration.GetConnectionString("Db"))
         .Build();
 
     freeSql.Aop.CommandAfter += (_, e) =>
@@ -53,7 +59,11 @@ static void ConfigureFreeSql(IServiceCollection services, IConfiguration configu
             Log.Logger.Error("Message:{Message}\r\nStackTrace:{StackTrace}", e.Exception.Message, e.Exception.StackTrace);
         }
 
-        Log.Logger.Debug("FreeSql>{Sql}", e.Command.CommandText);
+        Log.Logger.Debug("FreeSql>A>{Sql}", e.Command.CommandText);
+    };
+    freeSql.Aop.CommandBefore += (_, e) =>
+    {
+        Log.Logger.Debug("FreeSql>B>{Sql}", e.Command.CommandText);
     };
 
     services.AddSingleton(freeSql);

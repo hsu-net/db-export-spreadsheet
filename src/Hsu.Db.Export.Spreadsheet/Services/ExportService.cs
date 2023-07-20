@@ -19,10 +19,9 @@ public class ExportService : IExportService
         _logger = logger;
     }
 
-    public async Task ExportAsync(IEnumerable<dynamic>? rows, TableOptions options,string dir, DateTime date,Configuration? configuration, CancellationToken cancellation)
+    public async Task ExportAsync(IEnumerable<object>? rows, TableOptions options,string dir, DateTime date,Configuration? configuration, CancellationToken cancellation)
     {
-        if(rows==null || !rows.Any()) return;
-
+        //if(rows==null) return;
         if (options.Template != null)
         {
             await MiniExcel

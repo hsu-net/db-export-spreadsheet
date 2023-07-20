@@ -45,7 +45,12 @@ A component that regularly exports database tables to spreadsheets every day, ca
               Log.Logger.Error("Message:{Message}\r\nStackTrace:{StackTrace}", e.Exception.Message, e.Exception.StackTrace);
           }
   
-          Log.Logger.Debug("FreeSql>{Sql}", e.Command.CommandText);
+          Log.Logger.Debug("FreeSql>A>{Sql}", e.Command.CommandText);
+      };
+      
+      freeSql.Aop.CommandBefore += (_, e) =>
+      {
+          Log.Logger.Debug("FreeSql>B>{Sql}", e.Command.CommandText);
       };
   
       services.AddSingleton(freeSql);
@@ -61,96 +66,151 @@ A component that regularly exports database tables to spreadsheets every day, ca
 
 ```json
 {
-    "ConnectionStrings": {
-        "Default": "Data Source=127.0.0.1;Port=3306;User ID=root;Password=root;Initial Catalog=mysql;Charset=utf8;SslMode=none;Min pool size=1"
-    },
-    "Export": {
-        "Spreadsheet": {
-            "Trigger": "00:00:00",
-            "Interval": "00:00:30",
-            "Path": null,
-            "Tables": [
-                {
-                    "Name": "Csv测试表",
-                    "Code": "TestCsv",
-                    "Filter": "CreateTime",
-                    "Chunk": 1000,
-                    "AscOrder": true,
-                    "Output": "Csv",
-                    "Fields": [
-                        {
-                            "Name": "标识",
-                            "Column": "Id",
-                            "Type": "Int64"
-                        },
-                        {
-                            "Name": "字符串",
-                            "Column": "String",
-                            "Type": "String"
-                        },
-                        {
-                            "Name": "整型",
-                            "Column": "Integer",
-                            "Type": "Int32"
-                        },
-                        {
-                            "Name": "布尔",
-                            "Column": "Bool",
-                            "Type": "Boolean"
-                        },
-                        {
-                            "Name": "创建时间",
-                            "Column": "CreateTime",
-                            "Type": "DateTime"
-                        }
-                    ]
-                },
-                {
-                    "Name": "测试Xlsx",
-                    "Code": "TestXlsx",
-                    "Filter": "CreateTime",
-                    "Chunk": 1000,
-                    "AscOrder": false,
-                    "Template": "template.xlsx",
-                    "Output": "Xlsx",
-                    "Fields": [
-                        {
-                            "Name": "标识",
-                            "Column": "Id",
-                            "Type": "Int64"
-                        },
-                        {
-                            "Name": "字符串",
-                            "Column": "String",
-                            "Type": "String"
-                        },
-                        {
-                            "Name": "整型",
-                            "Column": "Integer",
-                            "Type": "Int32"
-                        },
-                        {
-                            "Name": "布尔",
-                            "Column": "Bool",
-                            "Type": "Boolean"
-                        },
-                        {
-                            "Name": "创建时间",
-                            "Column": "CreateTime",
-                            "Type": "DateTime"
-                        }
-                    ]
-                }
-            ]
+  "ConnectionStrings": {
+    "Default": "Data Source=mysql.sqlpub.com;Port=3306;User ID=public;Initial Catalog=db_hsu_des;Charset=utf8;SslMode=none;Min pool size=1"
+  },
+  "Export": {
+    "Spreadsheet": {
+      "Trigger": "00:00:00",
+      "Launch": true,
+      "Interval": "00:00:30",
+      "Timeout": "00:01:30",
+      "Path": null,
+      "Tables": [
+        {
+          "Name": "Employees",
+          "Code": "employees",
+          "Filter": "create_at",
+          "Chunk": 5000,
+          "AscOrder": true,
+          "Output": "Csv",
+          "Fields": [
+            {
+              "Name": "EmployeeNo",
+              "Column": "emp_no",
+              "Type": "Int32"
+            },
+            {
+              "Name": "Birthdate",
+              "Column": "birth_date",
+              "Type": "DateTime"
+            },
+            {
+              "Name": "First Name",
+              "Column": "first_name",
+              "Type": "String"
+            },
+            {
+              "Name": "Last Name",
+              "Column": "last_name",
+              "Type": "String"
+            },
+            {
+              "Name": "Gender",
+              "Column": "gender",
+              "Type": "String"
+            },
+            {
+              "Name": "Hire Date",
+              "Column": "hire_date",
+              "Type": "DateTime"
+            },
+            {
+              "Name": "Create At",
+              "Column": "create_at",
+              "Type": "DateTime"
+            }
+          ]
+        },
+        {
+          "Name": "Titles",
+          "Code": "titles",
+          "Filter": "create_at",
+          "Chunk": 5000,
+          "AscOrder": true,
+          "Output": "Xlsx",
+          "Fields": [
+            {
+              "Name": "EmployeeNo",
+              "Column": "emp_no",
+              "Type": "Int32"
+            },
+            {
+              "Name": "Title",
+              "Column": "title",
+              "Type": "String"
+            },
+            {
+              "Name": "From Date",
+              "Column": "from_date",
+              "Type": "DateTime"
+            },
+            {
+              "Name": "To Date",
+              "Column": "to_date",
+              "Type": "DateTime"
+            },
+            {
+              "Name": "Create At",
+              "Column": "create_at",
+              "Type": "DateTime"
+            }
+          ]
+        },
+        {
+          "Name": "Salaries",
+          "Code": "salaries",
+          "Filter": "create_at",
+          "Chunk": 5000,
+          "AscOrder": false,
+          "Template": "ExportTemplate.xlsx",
+          "Output": "Xlsx",
+          "Fields": [
+            {
+              "Name": "EmployeeNo",
+              "Column": "emp_no",
+              "Property": "EmployeeNo",
+              "Type": "Int32"
+            },
+            {
+              "Name": "Salary",
+              "Column": "salary",
+              "Property": "Salary",
+              "Type": "Int32"
+            },
+            {
+              "Name": "From Date",
+              "Column": "from_date",
+              "Property": "FromDate",
+              "Type": "DateTime"
+            },
+            {
+              "Name": "To Date",
+              "Column": "to_date",
+              "Property": "ToDate",
+              "Type": "DateTime"
+            },
+            {
+              "Name": "Create At",
+              "Column": "create_at",
+              "Type": "DateTime"
+            }
+          ]
         }
+      ]
     }
+  }
 }
 ```
 
 > - Trigger : The time to sync tables to local.
+> - Launch : if true will execute once at startup
+> - Timeout : The time to wait for table read operations
 > - Path : The path that export file storage
 > - Output : Only `Csv` and `Xlsx`
-> - Template : The template excel file,only `Xlsx` output.
+> - Chunk : The size of the chunk per read from the database
+> - Property : The name of the property for object to export,if null use `Column`
+> - Template : The template excel file,only `Xlsx` output
 
 ## Template Format
 
