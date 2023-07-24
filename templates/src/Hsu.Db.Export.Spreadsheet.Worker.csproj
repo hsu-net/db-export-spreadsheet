@@ -13,7 +13,7 @@
         <PackageReference Include="Hsu.Db.Export.Spreadsheet" Version="2023.307.24-preview223238" />
         <PackageReference Include="FreeSql.Provider.MySql" Version="3.2.697" />
         <PackageReference Include="Serilog.Extensions.Hosting" Version="7.0.0" />
-        <PackageReference Include="Serilog.Settings.Configuration" Version="6.0.0" />
+        <PackageReference Include="Serilog.Settings.Configuration" Version="7.0.0" />
         <PackageReference Include="Serilog.Sinks.Async" Version="1.5.0" />
         <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
         <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
@@ -23,6 +23,8 @@
         <!--#else -->
         <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
         <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="7.0.1" />
+        <!--#endif -->
+        <!--#if (!NetFxChosen)-->        
         <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="7.0.0" />
         <!--#endif -->
     </ItemGroup>

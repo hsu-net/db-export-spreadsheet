@@ -44,6 +44,10 @@
     "Net461Chosen": {
       "type": "computed",
       "value": "(Framework == \"net461\")"
+    },
+    "NetFxChosen": {
+      "type": "computed",
+      "value": "(Framework == \"net461\") or (Framework == \"net462\")"
     }
   }
 }
