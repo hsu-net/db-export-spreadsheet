@@ -40,6 +40,10 @@
       ],
       "replaces": "FrameworkParameter",
       "defaultValue": "net6.0"
+    },
+    "Net461Chosen": {
+      "type": "computed",
+      "value": "(Framework == \"net461\")"
     }
   }
 }
