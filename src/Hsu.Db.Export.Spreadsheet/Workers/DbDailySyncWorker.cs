@@ -70,7 +70,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
             try
             {
                 now = now.AddDays(-1);
-                _logger.LogInformation("Executing synchronously mes data....");
+                _logger.LogInformation("Executing synchronously data....");
                 var completed = false;
                 while (!completed)
                 {
@@ -83,21 +83,26 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                         var sw = Stopwatch.StartNew();
                         try
                         {
-                            _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} records ...", table.Name, date);
-                            var exportService = _factory.Get(table.Output);
-                            if (exportService == null) throw new NotSupportedException($"No export service available for {table.Output}");
-                            var total = await FetchRecordAsync(_freeSql,timeout, table, date, _path, types[table.Code], exportService, _logger, stoppingToken);
-                            sw.Stop();
-                            _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} export {Total} records completed used {Time}."
+                            _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} records to {Output} ..."
                                 , table.Name
                                 , date
+                                , table.Output
+                            );
+                            var exportService = _factory.Get(table.Output);
+                            if (exportService == null) throw new NotSupportedException($"No export service available for {table.Output}");
+                            var total = await FetchRecordAsync(_freeSql, timeout, table, date, _path, types[table.Code], exportService, _logger, stoppingToken);
+                            sw.Stop();
+                            _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} export to {Output} {Total} records completed used {Time}."
+                                , table.Name
+                                , date
+                                , table.Output
                                 , total
                                 , sw.Elapsed);
                         }
                         catch (Exception ex)
                         {
                             _logger.LogError(ex, ex.Message);
-                            if(sw.IsRunning) sw.Stop();
+                            if (sw.IsRunning) sw.Stop();
                             completed = true;
                             break;
                         }
@@ -156,10 +161,10 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                 }
             }
         };
-        
-        var collection =  new BlockingCollection<object>();
+
+        var collection = new BlockingCollection<object>();
         var tcs = new TaskCompletionSource<int>();
-        
+
         _ = Task.Run(() =>
         {
             var count = 0;
@@ -207,8 +212,8 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                 tcs.SetException(e);
             }
         }, stoppingToken);
-        
-        await exportService.ExportAsync(collection.GetConsumingEnumerable(),info, table, dir, date.Date, stoppingToken);
+
+        await exportService.ExportAsync(collection.GetConsumingEnumerable(), info, table, dir, date.Date, stoppingToken);
         return await tcs.Task;
     }
 
@@ -281,8 +286,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                 var attributes = new List<Attribute>()
                 {
                     new ColumnAttribute() { Name = field.Column },
-                    new DisplayNameAttribute(field.Name),
-                    new DescriptionAttribute(field.Name)
+                    new ExportDisplayAttribute(field.Name) { Display = field.Name }
                 };
                 if (!string.IsNullOrWhiteSpace(field.Format))
                 {
@@ -319,7 +323,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                 table.Template = null;
             }
         }
-        
+
         return types;
     }
 

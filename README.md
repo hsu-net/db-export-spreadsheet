@@ -12,10 +12,15 @@ A component that regularly exports database tables to spreadsheets every day, ca
 
 ## Package Version
 
+- Hsu.Db.Export.Spreadsheet : library
+- Hsu.Db.Export.Spreadsheet.Hosting : template
+
 | Name | Source | Stable | Preview |
 |---|---|---|---|
 | Hsu.Db.Export.Spreadsheet | Nuget | [![NuGet](https://img.shields.io/nuget/v/Hsu.Db.Export.Spreadsheet?style=flat-square)](https://www.nuget.org/packages/Hsu.Db.Export.Spreadsheet) | [![NuGet](https://img.shields.io/nuget/vpre/Hsu.Db.Export.Spreadsheet?style=flat-square)](https://www.nuget.org/packages/Hsu.Db.Export.Spreadsheet) |
 | Hsu.Db.Export.Spreadsheet | MyGet | [![MyGet](https://img.shields.io/myget/godsharp/v/Hsu.Db.Export.Spreadsheet?style=flat-square&label=myget)](https://www.myget.org/feed/godsharp/package/nuget/Hsu.Db.Export.Spreadsheet) | [![MyGet](https://img.shields.io/myget/godsharp/vpre/Hsu.Db.Export.Spreadsheet?style=flat-square&label=myget)](https://www.myget.org/feed/godsharp/package/nuget/Hsu.Db.Export.Spreadsheet) |
+| Hsu.Db.Export.Spreadsheet.Hosting | Nuget | [![NuGet](https://img.shields.io/nuget/v/Hsu.Db.Export.Spreadsheet.Hosting?style=flat-square)](https://www.nuget.org/packages/Hsu.Db.Export.Spreadsheet.Hosting) | [![NuGet](https://img.shields.io/nuget/vpre/Hsu.Db.Export.Spreadsheet.Hosting?style=flat-square)](https://www.nuget.org/packages/Hsu.Db.Export.Spreadsheet.Hosting) |
+| Hsu.Db.Export.Spreadsheet.Hosting | MyGet | [![MyGet](https://img.shields.io/myget/godsharp/v/Hsu.Db.Export.Spreadsheet.Hosting?style=flat-square&label=myget)](https://www.myget.org/feed/godsharp/package/nuget/Hsu.Db.Export.Spreadsheet.Hosting) | [![MyGet](https://img.shields.io/myget/godsharp/vpre/Hsu.Db.Export.Spreadsheet.Hosting?style=flat-square&label=myget)](https://www.myget.org/feed/godsharp/package/nuget/Hsu.Db.Export.Spreadsheet.Hosting) |
 
 ## Getting Started
 
@@ -211,13 +216,20 @@ A component that regularly exports database tables to spreadsheets every day, ca
   }
 }
 ```
-- Table
-> - Trigger : The time to sync tables to local.
+- Worker
+> - Trigger : The time to sync tables to local
 > - Launch : if true will execute once at startup
+> - Interval : The time to wait for export mutil days
 > - Timeout : The time to wait for table read operations
 > - Path : The path that export file storage
-> - Output : Only `Csv` and `Xlsx`
+
+- Tables
+> - Name : The name of the column, to display in header
+> - Code : The column of the table
+> - Filter : The date column to filter
 > - Chunk : The size of the chunk per read from the database
+> - AscOrder : Is ascending or descending
+> - Output : Only `Csv` and `Xlsx`
 
 - Fields
 > - Property : The name of the property for object to export,if null use `Column`

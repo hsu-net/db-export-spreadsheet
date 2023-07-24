@@ -67,14 +67,9 @@ public class CsvExportService : IExportService
         {
             var column = columns[i];
             var columnName = column.Property.Name;
-            if (column.Property.GetCustomAttribute<DescriptionAttribute>() is { } description && !description.Description.IsNullOrWhiteSpace())
+            if (column.Property.GetCustomAttribute<ExportDisplayAttribute>() is { } exportDisplay && !exportDisplay.Display.IsNullOrWhiteSpace())
             {
-                columnName = description.Description;
-            }
-
-            if (column.Property.GetCustomAttribute<DisplayNameAttribute>() is { } display && !display.DisplayName.IsNullOrWhiteSpace())
-            {
-                columnName = display.DisplayName;
+                columnName = exportDisplay.Display;
             }
 
             values[i] = columnName;

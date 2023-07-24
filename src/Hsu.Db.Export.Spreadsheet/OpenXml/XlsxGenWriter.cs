@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Reflection;
 using DocumentFormat.OpenXml.Spreadsheet;
+using Hsu.Db.Export.Spreadsheet.Annotations;
 using Hsu.Db.Export.Spreadsheet.Utils;
 
 namespace Hsu.Db.Export.Spreadsheet.OpenXml;
@@ -13,13 +14,9 @@ public static class XlsxGenWriter
         foreach(var column in columns)
         {
             var columnName = column.Property.Name;
-            if (column.Property.GetCustomAttribute<DescriptionAttribute>() is { } description && !description.Description.IsNullOrWhiteSpace())
+            if (column.Property.GetCustomAttribute<ExportDisplayAttribute>() is { } exportDisplay && !exportDisplay.Display.IsNullOrWhiteSpace())
             {
-                columnName = description.Description;
-            }
-            if (column.Property.GetCustomAttribute<DisplayNameAttribute>() is { } display && !display.DisplayName.IsNullOrWhiteSpace())
-            {
-                columnName = display.DisplayName;
+                columnName = exportDisplay.Display;
             }
 
             headerRow.AppendChild(new Cell

@@ -15,7 +15,7 @@
         <IncludeContentInPack>true</IncludeContentInPack>
         <IncludeBuildOutput>false</IncludeBuildOutput>
         <ContentTargetFolders>content</ContentTargetFolders>
-        <OutputPath>..\..\output\libs\$(AssemblyName)</OutputPath>
+        <OutputPath>..\output\libs\$(AssemblyName)</OutputPath>
     </PropertyGroup>
 
     <ItemGroup>
