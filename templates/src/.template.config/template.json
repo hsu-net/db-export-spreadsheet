@@ -47,7 +47,7 @@
     },
     "NetFxChosen": {
       "type": "computed",
-      "value": "(Framework == \"net461\") or (Framework == \"net462\")"
+      "value": "(Framework == \"net461\") || (Framework == \"net462\")"
     }
   }
 }

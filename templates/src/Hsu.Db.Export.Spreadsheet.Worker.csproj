@@ -24,7 +24,7 @@
         <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
         <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="7.0.1" />
         <!--#endif -->
-        <!--#if (!NetFxChosen)-->        
+        <!--#if (!NetFxChosen) -->        
         <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="7.0.0" />
         <!--#endif -->
     </ItemGroup>
