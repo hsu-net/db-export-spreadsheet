@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <LangVersion>11.0</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <PackageType>Template</PackageType>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <Title>Hsu Db Export Spreadsheet Hosting Template</Title>
+        <Authors>Hsu</Authors>
+        <Description>A database table export spreadsheet component hosting, which can export Excel and Csv files, and supports Excel templates for Windows and Linux.</Description>
+        <IncludeContentInPack>true</IncludeContentInPack>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <ContentTargetFolders>content</ContentTargetFolders>
+        <OutputPath>..\..\output\libs\$(AssemblyName)</OutputPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Content Include="src\**\*" Exclude="src\**\bin\**;**\obj\**;"/>
+        <Compile Remove="src\**\*"/>
+    </ItemGroup>
+</Project>

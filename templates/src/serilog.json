@@ -1,0 +1,44 @@
+{
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Verbose"
+    },
+    "Using": [ "Serilog.Sinks.Async", "Serilog.Sinks.File", "Serilog.Sinks.Console" ],
+    "Enrich": [ "FromLogContext" ],
+    "Properties": {
+      "app": "worker"
+    },
+    "WriteTo": [
+      {
+        "Name": "Async",
+        "Args": {
+          "configure": [
+            {
+              "Name": "Console",
+              "Args": {
+                "theme": "Serilog.Sinks.SystemConsole.Themes.AnsiConsoleTheme::Code, Serilog.Sinks.Console"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Name": "Async",
+        "Args": {
+          "configure": [
+            {
+              "Name": "File",
+              "Args": {
+                "path": "%AppRoot%/logs/app_.txt",
+                "rollingInterval": "Day",
+                "rollOnFileSizeLimit": true,
+                "fileSizeLimitBytes": 209715200,
+                "flushToDiskInterval": "0:0:5"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

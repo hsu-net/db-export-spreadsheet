@@ -12,6 +12,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NukeBuild", "build\NukeBuil
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{EFCD93A6-E8AC-418F-B863-6AFF38349A63}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "templates", "templates", "{57B87F0D-35C2-49D9-99F4-F6AEDF080076}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hsu.Db.Export.Spreadsheet.Hosting", "templates\Hsu.Db.Export.Spreadsheet.Hosting.csproj", "{A5EF75D2-C461-44AB-A994-644B8E53E6E2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +25,7 @@ Global
 		{D0601B46-98C8-4E70-9BDC-08EEC6759834} = {D641040A-3751-4758-9C9A-907E62F8AB50}
 		{1716ECCD-EAB1-45D0-83ED-30108FD96684} = {F8B26391-C4C2-408D-A275-F851EC5CEA1F}
 		{1E4A22AD-6194-4C86-AFDA-F7BB8D43693D} = {EFCD93A6-E8AC-418F-B863-6AFF38349A63}
+		{A5EF75D2-C461-44AB-A994-644B8E53E6E2} = {57B87F0D-35C2-49D9-99F4-F6AEDF080076}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{1E4A22AD-6194-4C86-AFDA-F7BB8D43693D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -33,5 +38,9 @@ Global
 		{1716ECCD-EAB1-45D0-83ED-30108FD96684}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1716ECCD-EAB1-45D0-83ED-30108FD96684}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1716ECCD-EAB1-45D0-83ED-30108FD96684}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5EF75D2-C461-44AB-A994-644B8E53E6E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5EF75D2-C461-44AB-A994-644B8E53E6E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5EF75D2-C461-44AB-A994-644B8E53E6E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5EF75D2-C461-44AB-A994-644B8E53E6E2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
