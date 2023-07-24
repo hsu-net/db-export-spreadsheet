@@ -1,10 +1,11 @@
 ﻿using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using FreeSql.DataAnnotations;
 using FreeSql.Internal.Model;
+using Hsu.Db.Export.Spreadsheet.Annotations;
 using Hsu.Db.Export.Spreadsheet.Options;
-using Hsu.Db.Export.Spreadsheet.Services;
 using Hsu.Db.Export.Spreadsheet.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -21,19 +22,19 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
 {
     private readonly ILogger<DbDailySyncWorker> _logger;
     private readonly IFreeSql _freeSql;
-    private readonly IExportService _exportService;
+    private readonly IExportServiceFactory _factory;
     private readonly ExportOptions _options;
     private readonly TimeSpan _time;
     private readonly string _path;
 
-    public DbDailySyncWorker(ILogger<DbDailySyncWorker> logger, IFreeSql freeSql, IConfiguration configuration, IExportService exportService)
+    public DbDailySyncWorker(ILogger<DbDailySyncWorker> logger, IFreeSql freeSql, IConfiguration configuration, IExportServiceFactory exportService)
     {
         _options = configuration.GetSection(ExportOptions.Export).Get<ExportOptions>() ?? throw new InvalidOperationException();
         _path = string.IsNullOrWhiteSpace(_options.Path) ? Path.Combine(Environment.CurrentDirectory, "Data") : _options.Path;
         _time = _options.Trigger;
         _logger = logger;
         _freeSql = freeSql;
-        _exportService = exportService;
+        _factory = exportService;
     }
 
     public override Task StartAsync(CancellationToken cancellationToken)
@@ -58,7 +59,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
         var launch = _options.Launch ?? false;
         var timeout = (int)_options.Timeout.GetValueOrDefault(TimeSpan.FromMinutes(1.5)).TotalMilliseconds;
         var types = InitialConfigurations();
-        _exportService.InitialConfigurations(_options.Tables);
+        //_exportService.InitialConfigurations(_options.Tables);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -83,7 +84,9 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                         try
                         {
                             _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} records ...", table.Name, date);
-                            var total = await FetchRecordAsync(_freeSql,timeout, table, date, _path, types[table.Code], _exportService, _logger, stoppingToken);
+                            var exportService = _factory.Get(table.Output);
+                            if (exportService == null) throw new NotSupportedException($"No export service available for {table.Output}");
+                            var total = await FetchRecordAsync(_freeSql,timeout, table, date, _path, types[table.Code], exportService, _logger, stoppingToken);
                             sw.Stop();
                             _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} export {Total} records completed used {Time}."
                                 , table.Name
@@ -153,10 +156,10 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                 }
             }
         };
-        //var collection = new AsyncLocal<BlockingCollection<object>>() { Value = new BlockingCollection<object>() };
+        
         var collection =  new BlockingCollection<object>();
         var tcs = new TaskCompletionSource<int>();
-
+        
         _ = Task.Run(() =>
         {
             var count = 0;
@@ -175,13 +178,19 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                     {
                         try
                         {
-                            logger.LogDebug("{Table} at {Date:yyyy-MM-dd} Query Chunk#{No:0000} {Size} ", table.Name, date.Date, Interlocked.Increment(ref counter), x.Object.Count);
                             down.AddCount();
                             Interlocked.Add(ref count, x.Object.Count);
                             foreach(var item in x.Object)
                             {
-                                collection.TryAdd(item, Timeout.Infinite, stoppingToken);
+                                collection.Add(item, stoppingToken);
                             }
+
+                            logger.LogDebug("{Table} at {Date:yyyy-MM-dd} Query Chunk#{No:0000} {Size} {Remain}"
+                                , table.Name
+                                , date.Date
+                                , Interlocked.Increment(ref counter)
+                                , x.Object.Count
+                                , collection.Count);
                         }
                         finally
                         {
@@ -198,7 +207,8 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                 tcs.SetException(e);
             }
         }, stoppingToken);
-        await exportService.ExportAsync(collection.GetConsumingEnumerable(stoppingToken), table, dir, date.Date, stoppingToken);
+        
+        await exportService.ExportAsync(collection.GetConsumingEnumerable(),info, table, dir, date.Date, stoppingToken);
         return await tcs.Task;
     }
 
@@ -268,10 +278,21 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
             {
                 if (!TypeHelper.TryFromTypeCode(field.Type, out var type) || type == null) type = typeof(string);
                 if (type.IsValueType && field.Nullable.GetValueOrDefault(true)) type = typeof(Nullable<>).MakeGenericType(type);
+                var attributes = new List<Attribute>()
+                {
+                    new ColumnAttribute() { Name = field.Column },
+                    new DisplayNameAttribute(field.Name),
+                    new DescriptionAttribute(field.Name)
+                };
+                if (!string.IsNullOrWhiteSpace(field.Format))
+                {
+                    attributes.Add(new FormatAttribute { Format = field.Format });
+                }
+
                 builder.Property(field.Property ?? field.Column
                     , type
-                    , new ColumnAttribute() { Name = field.Column }
-                ); //new DisplayNameAttribute(field.Name)
+                    , attributes.ToArray()
+                );
             }
 
             types.TryAdd(table.Code, builder.Build());

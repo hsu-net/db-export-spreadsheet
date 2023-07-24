@@ -5,7 +5,8 @@
 [![main](https://github.com/hsu-net/db-export-spreadsheet/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/hsu-net/db-export-spreadsheet/actions/workflows/deploy.yml)
 [![Nuke Build](https://img.shields.io/badge/Nuke-Build-yellow.svg)](https://github.com/nuke-build/nuke)
 [![FreeSql](https://img.shields.io/nuget/v/FreeSql?style=flat-square&label=FreeSql)](https://www.nuget.org/packages/FreeSql)
-[![MiniExcel](https://img.shields.io/nuget/v/FreeSql?style=flat-square&label=MiniExcel)](https://www.nuget.org/packages/MiniExcel)
+[![OpenXml](https://img.shields.io/nuget/v/DocumentFormat.OpenXml?style=flat-square&label=OpenXml)](https://www.nuget.org/packages/DocumentFormat.OpenXml)
+
 
 A component that regularly exports database tables to spreadsheets every day, can export Excel and Csv files, and supports Excel templates.
 
@@ -93,7 +94,8 @@ A component that regularly exports database tables to spreadsheets every day, ca
             {
               "Name": "Birthdate",
               "Column": "birth_date",
-              "Type": "DateTime"
+              "Type": "DateTime",
+              "Format": "yyyy-MM-dd"
             },
             {
               "Name": "First Name",
@@ -108,12 +110,14 @@ A component that regularly exports database tables to spreadsheets every day, ca
             {
               "Name": "Gender",
               "Column": "gender",
-              "Type": "String"
+              "Type": "String",
+              "Format": "yyyy-MM-dd"
             },
             {
               "Name": "Hire Date",
               "Column": "hire_date",
-              "Type": "DateTime"
+              "Type": "DateTime",
+              "Format": "yyyy-MM-dd"
             },
             {
               "Name": "Create At",
@@ -143,12 +147,14 @@ A component that regularly exports database tables to spreadsheets every day, ca
             {
               "Name": "From Date",
               "Column": "from_date",
-              "Type": "DateTime"
+              "Type": "DateTime",
+              "Format": "yyyy-MM-dd"
             },
             {
               "Name": "To Date",
               "Column": "to_date",
-              "Type": "DateTime"
+              "Type": "DateTime",
+              "Format": "yyyy-MM-dd"
             },
             {
               "Name": "Create At",
@@ -176,19 +182,22 @@ A component that regularly exports database tables to spreadsheets every day, ca
               "Name": "Salary",
               "Column": "salary",
               "Property": "Salary",
-              "Type": "Int32"
+              "Type": "Int32",
+              "Format": "0000.00"
             },
             {
               "Name": "From Date",
               "Column": "from_date",
               "Property": "FromDate",
-              "Type": "DateTime"
+              "Type": "DateTime",
+              "Format": "yyyy-MM-dd"
             },
             {
               "Name": "To Date",
               "Column": "to_date",
               "Property": "ToDate",
-              "Type": "DateTime"
+              "Type": "DateTime",
+              "Format": "yyyy-MM-dd"
             },
             {
               "Name": "Create At",
@@ -202,19 +211,25 @@ A component that regularly exports database tables to spreadsheets every day, ca
   }
 }
 ```
-
+- Table
 > - Trigger : The time to sync tables to local.
 > - Launch : if true will execute once at startup
 > - Timeout : The time to wait for table read operations
 > - Path : The path that export file storage
 > - Output : Only `Csv` and `Xlsx`
 > - Chunk : The size of the chunk per read from the database
+
+- Fields
 > - Property : The name of the property for object to export,if null use `Column`
+> - Type : The type of field, default is `String`
+> - Nullable : The field is nullable
 > - Template : The template excel file,only `Xlsx` output
+> - Format : The format for `IFormattable`
+> - Escape : if true escape the value, default is false
 
 ## Template Format
 
-The template format is `{{_.Field}}`.
+The template format is `Field`.
 
 ## Fields Type Format
 
@@ -233,6 +248,7 @@ The template format is `{{_.Field}}`.
 - Decimal
 - String
 - DateTime
+- Enum
 
 ## License
 

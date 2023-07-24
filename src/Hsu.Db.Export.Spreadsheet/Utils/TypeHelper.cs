@@ -8,6 +8,19 @@ namespace Hsu.Db.Export.Spreadsheet.Utils;
 public static class TypeHelper
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsNullable(this Type type)
+    {
+        return type.IsNullable(out _);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsNullable(this Type t, out Type? type)
+    {
+        type = Nullable.GetUnderlyingType(t);
+        return type != null;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryFromTypeCode(TypeCode typeCode, out Type? type)
     {
         type = null;
