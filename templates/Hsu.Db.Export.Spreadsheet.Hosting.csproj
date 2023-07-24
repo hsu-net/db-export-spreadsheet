@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
+    
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>11.0</LangVersion>
@@ -16,7 +16,19 @@
         <IncludeBuildOutput>false</IncludeBuildOutput>
         <ContentTargetFolders>content</ContentTargetFolders>
         <OutputPath>..\output\libs\$(AssemblyName)</OutputPath>
+
+        <RepositoryType>git</RepositoryType>
+        <RepositoryUrl>https://github.com/hsu-net/db-export-spreadsheet.git</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/hsu-net/db-export-spreadsheet</PackageProjectUrl>
+        <PackageIcon>icon.png</PackageIcon>
+        <PackageTags>Database;Db;Export;Excel;Csv;Spreadsheet;Hsu;</PackageTags>
+        <LicenseFile>LICENSE</LicenseFile>
     </PropertyGroup>
+    
+    <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)../icon.png" Pack="true" Visible="false" PackagePath="" />
+        <None Include="$(MSBuildThisFileDirectory)../LICENSE" Pack="true" Visible="false" PackagePath="$(PackageLicenseFile)" />
+    </ItemGroup>
 
     <ItemGroup>
         <Content Include="src\**\*" Exclude="src\**\bin\**;**\obj\**;"/>
