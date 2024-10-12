@@ -52,83 +52,137 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
+    { 
         _logger.LogInformation("Sync Executing");
         await Task.Delay(5000, stoppingToken);
+        
         var dir = InitialDirectory();
         var launch = _options.Launch ?? false;
         var timeout = (int)_options.Timeout.GetValueOrDefault(TimeSpan.FromMinutes(1.5)).TotalMilliseconds;
         var types = InitialConfigurations();
-        //_exportService.InitialConfigurations(_options.Tables);
+
+        if (launch)
+        {
+            await HandlerAsync(DateTime.Now,dir,types,timeout,stoppingToken);
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            var now = DateTime.Now;
-            if (!launch && await Check(now, _time, stoppingToken)) continue;
-            launch = false;
-
             try
             {
-                now = now.AddDays(-1);
-                _logger.LogInformation("Executing synchronously data....");
-                var completed = false;
-                while (!completed)
-                {
-                    completed = true;
-                    foreach(var table in _options.Tables)
-                    {
-                        var (date, tmp) = GetDate(dir, table.Code, now);
-                        if (date > now) continue;
-                        if (date < now) completed = false;
-                        var sw = Stopwatch.StartNew();
-                        try
-                        {
-                            _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} records to {Output} ..."
-                                , table.Name
-                                , date
-                                , table.Output
-                            );
-                            var exportService = _factory.Get(table.Output);
-                            if (exportService == null) throw new NotSupportedException($"No export service available for {table.Output}");
-                            var total = await FetchRecordAsync(_freeSql, timeout, table, date, _path, types[table.Code], exportService, _logger, stoppingToken);
-                            sw.Stop();
-                            _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} export to {Output} {Total} records completed used {Time}."
-                                , table.Name
-                                , date
-                                , table.Output
-                                , total
-                                , sw.Elapsed);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, ex.Message);
-                            if (sw.IsRunning) sw.Stop();
-                            completed = true;
-                            break;
-                        }
-                        finally
-                        {
-                            #if NETFRAMEWORK || NETSTANDARD2_0
-                            File.WriteAllText(tmp, $"{date.AddDays(1):yyyy-MM-dd}");
-                            #else
-                            await File.WriteAllTextAsync(tmp, $"{date.AddDays(1):yyyy-MM-dd}", stoppingToken);
-                            #endif
-                        }
-                    }
+                var now = DateTime.Now;
+                var ret = await Check(now, _time, stoppingToken);
+                _logger.LogDebug("Sync Check: {ret}", ret);
+                if (!ret) continue;
 
-                    if (!completed)
+                await HandlerAsync(now, dir, types, timeout, stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+            }
+        }
+
+        _logger.LogInformation("Sync Executed");
+    }
+
+    protected async Task HandlerAsync(DateTime now,string dir, ConcurrentDictionary<string, TableInfo> types, int timeout, CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("Sync Handler Executing");
+
+        try
+        {
+            now = now.AddDays(-1);
+            _logger.LogInformation("Executing synchronously data....");
+            var completed = false;
+
+            while (!completed)
+            {
+                completed = true;
+
+                foreach (var table in _options.Tables)
+                {
+                    var (date, tmp) = GetDate(dir, table.Code, now);
+                    if (date > now) continue;
+
+                    if (date < now) completed = false;
+                    var sw = Stopwatch.StartNew();
+
+                    try
                     {
-                        await Task.Delay(_options.Interval, stoppingToken);
+                        _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} records to {Output} ..."
+                            , table.Name
+                            , date
+                            , table.Output
+                        );
+                        var exportService = _factory.Get(table.Output);
+                        if (exportService == null) throw new NotSupportedException($"No export service available for {table.Output}");
+
+                        var file = table.Output switch
+                        {
+                            "Csv" => Path.Combine(_path, $"{table.Name}-{date:yyyy-MM-dd}.csv"),
+                            "Xlsx" => Path.Combine(_path, $"{table.Name}-{date:yyyy-MM-dd}.xlsx"),
+                            _ => null
+                        };
+                        
+                        var total = await FetchRecordAsync(_freeSql, timeout, table, date, _path, types[table.Code], exportService, _logger, stoppingToken);
+                        sw.Stop();
+                        _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} export to {Output} {Total} records completed used {Time}."
+                            , table.Name
+                            , date
+                            , Path.GetFileName(file)
+                            , total
+                            , sw.Elapsed);
+
+                        if (total < 1)
+                        {
+                            try
+                            {
+                                if (file != null && File.Exists(file))
+                                {
+                                    File.Delete(file);
+                                    _logger.LogDebug("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} delete file {File}"
+                                        , table.Name
+                                        , date
+                                        , Path.GetFileName(file));
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, ex.Message);
+                            }
+                        }
+
+#if NETFRAMEWORK || NETSTANDARD2_0
+                        File.WriteAllText(tmp, $"{date.AddDays(1):yyyy-MM-dd}");
+#else
+                        await File.WriteAllTextAsync(tmp, $"{date.AddDays(1):yyyy-MM-dd}", stoppingToken);
+#endif
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, ex.Message);
+                        if (sw.IsRunning) sw.Stop();
+                        completed = true;
+                        break;
                     }
                 }
 
-                _logger.LogInformation("Executing synchronously mes data completed");
+                if (!completed)
+                {
+                    await Task.Delay(_options.Interval, stoppingToken);
+                }
             }
-            finally
-            {
-                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
-            }
+
+            _logger.LogInformation("Executing synchronously mes data completed");
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, ex.Message);
+        }
+
+        await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+        _logger.LogInformation("Sync Handler Executed");
     }
 
     private static async Task<int> FetchRecordAsync(IFreeSql freeSql,
@@ -240,37 +294,33 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
 
     private static async Task<bool> Check(DateTime now, TimeSpan span, CancellationToken stoppingToken)
     {
-        var t1 = now.Date.Add(span - TimeSpan.FromHours(1));
-        var t2 = now.Date.Add(span - TimeSpan.FromMinutes(15));
+        var t2 = now.Date.Add(span - TimeSpan.FromMinutes(5)); 
+        // target time - 1 minute
         var t3 = now.Date.Add(span - TimeSpan.FromMinutes(1));
+        // target time
         var t4 = now.Date.Add(span);
-        var t5 = now.Date.Add(span + TimeSpan.FromSeconds(59));
+        // target time + 1 minute
+        var t5 = now.Date.Add(span + TimeSpan.FromMinutes(1));
 
-        if (now < t1 || now > t5)
+        if (now < t2 || now > t5)
         {
-            await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
-            return true;
+            await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+            return false;
+        }
+
+        if (now < t3)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            return false;
         }
 
         if (now < t4)
         {
             await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
-            return true;
+            return false;
         }
-
-        if (now < t3)
-        {
-            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
-            return true;
-        }
-
-        if (now < t2)
-        {
-            await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
-            return true;
-        }
-
-        return false;
+        
+        return true;
     }
 
     private ConcurrentDictionary<string, TableInfo> InitialConfigurations()
