@@ -9,6 +9,7 @@ public class ExportOptions
     public static string Export { get; set; } = "Export:Spreadsheet";
     public TimeSpan Trigger { get; set; } = TimeSpan.Zero;
     public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(30);
+    [DefaultValue("06:00:00")] public TimeSpan? Offset { get; set; } = TimeSpan.FromHours(6);
     [DefaultValue("00:01:30")] public TimeSpan? Timeout { get; set; } = TimeSpan.FromSeconds(60);
     [DefaultValue(false)] public bool? Launch { get; set; }
     public string Path { get; set; } = string.Empty;

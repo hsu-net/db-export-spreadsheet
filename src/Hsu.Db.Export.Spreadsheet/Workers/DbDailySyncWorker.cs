@@ -25,6 +25,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
     private readonly IExportServiceFactory _factory;
     private readonly ExportOptions _options;
     private readonly TimeSpan _time;
+    private readonly TimeSpan _offset;
     private readonly string _path;
 
     public DbDailySyncWorker(ILogger<DbDailySyncWorker> logger, IFreeSql freeSql, IConfiguration configuration, IExportServiceFactory exportService)
@@ -32,6 +33,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
         _options = configuration.GetSection(ExportOptions.Export).Get<ExportOptions>() ?? throw new InvalidOperationException();
         _path = string.IsNullOrWhiteSpace(_options.Path) ? Path.Combine(Environment.CurrentDirectory, "Data") : _options.Path;
         _time = _options.Trigger;
+        _offset = _options.Offset ?? TimeSpan.FromHours(6);
         _logger = logger;
         _freeSql = freeSql;
         _factory = exportService;
@@ -63,7 +65,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
 
         if (launch)
         {
-            await HandlerAsync(DateTime.Now,dir,types,timeout,stoppingToken);
+            await HandlerAsync(DateTime.Now, _offset, dir, types, timeout, stoppingToken);
         }
 
         while (!stoppingToken.IsCancellationRequested)
@@ -75,7 +77,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                 _logger.LogDebug("Sync Check: {ret}", ret);
                 if (!ret) continue;
 
-                await HandlerAsync(now, dir, types, timeout, stoppingToken);
+                await HandlerAsync(now, _offset, dir, types, timeout, stoppingToken);
             }
             catch (Exception ex)
             {
@@ -86,7 +88,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
         _logger.LogInformation("Sync Executed");
     }
 
-    protected async Task HandlerAsync(DateTime now,string dir, ConcurrentDictionary<string, TableInfo> types, int timeout, CancellationToken stoppingToken)
+    protected async Task HandlerAsync(DateTime now,TimeSpan offset,string dir, ConcurrentDictionary<string, TableInfo> types, int timeout, CancellationToken stoppingToken)
     {
         _logger.LogInformation("Sync Handler Executing");
 
@@ -125,7 +127,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                             _ => null
                         };
                         
-                        var total = await FetchRecordAsync(_freeSql, timeout, table, date, _path, types[table.Code], exportService, _logger, stoppingToken);
+                        var total = await FetchRecordAsync(_freeSql, timeout, table, date,offset, _path, types[table.Code], exportService, _logger, stoppingToken);
                         sw.Stop();
                         _logger.LogInformation("Executing synchronously [{Table}]-{Date:yyyy-MM-dd} export to {Output} {Total} records completed used {Time}."
                             , table.Name
@@ -189,6 +191,7 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
         int timeout,
         TableOptions table,
         DateTime date,
+        TimeSpan offset,
         string dir,
         TableInfo info,
         IExportService exportService,
@@ -205,13 +208,13 @@ public class DbDailySyncWorker : BackgroundService, IDbDailySyncWorker
                 {
                     Field = $"a.{table.Filter}",
                     Operator = DynamicFilterOperator.GreaterThanOrEqual,
-                    Value = date.Date
+                    Value = date.Date + offset
                 },
                 new()
                 {
                     Field = $"a.{table.Filter}",
                     Operator = DynamicFilterOperator.LessThan,
-                    Value = date.Date.AddDays(1)
+                    Value = date.Date.AddDays(1) + offset
                 }
             }
         };
